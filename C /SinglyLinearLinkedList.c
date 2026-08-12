@@ -1,7 +1,6 @@
-```c
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -15,13 +14,15 @@
 
 struct node
 {
-    int data;
+    void *data;
     struct node *next;
 };
 
 typedef struct node NODE;
 typedef struct node *PNODE;
 typedef struct node **PPNODE;
+
+typedef void (*DISPLAY)(void *);
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -33,11 +34,16 @@ typedef struct node **PPNODE;
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void Display(PNODE first)
+void Display(PNODE first, DISPLAY fp)
 {
     while(first != NULL)
     {
-        printf("| %d | -> ", first->data);
+        printf("| ");
+
+        fp(first->data);
+
+        printf(" | -> ");
+
         first = first->next;
     }
 
@@ -77,20 +83,23 @@ int Count(PNODE first)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void InsertFirst(PPNODE first, int iNo)
+void InsertFirst(PPNODE first, void *iNo, int size)
 {
     PNODE newn = NULL;
 
     newn = (PNODE)malloc(sizeof(NODE));
 
-    newn->data = iNo;
+    newn->data = malloc(size);
+
+    memcpy(newn->data, iNo, size);
+
     newn->next = NULL;
 
-    if(NULL == *first)          // LL is empty
+    if(NULL == *first)
     {
         *first = newn;
     }
-    else                        // LL contains atleast one node
+    else
     {
         newn->next = *first;
         *first = newn;
@@ -107,21 +116,24 @@ void InsertFirst(PPNODE first, int iNo)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void InsertLast(PPNODE first, int iNo)
+void InsertLast(PPNODE first, void *iNo, int size)
 {
     PNODE newn = NULL;
     PNODE temp = NULL;
 
     newn = (PNODE)malloc(sizeof(NODE));
 
-    newn->data = iNo;
+    newn->data = malloc(size);
+
+    memcpy(newn->data, iNo, size);
+
     newn->next = NULL;
 
-    if(*first == NULL)          // LL is empty
+    if(*first == NULL)
     {
         *first = newn;
     }
-    else                        // LL contains atleast one node
+    else
     {
         temp = *first;
 
@@ -144,34 +156,38 @@ void InsertLast(PPNODE first, int iNo)
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-void InsertAtPos(PPNODE first, int iNo, int iPos)
+void InsertAtPos(PPNODE first, void *iNo, int iPos, int size)
 {
     int iCount = 0;
+    int i = 0;
+
     PNODE newn = NULL;
     PNODE temp = NULL;
-    int i = 0;
 
     iCount = Count(*first);
 
     if((iPos < 1) || (iPos > iCount + 1))
     {
-        printf("Invalid position");
+        printf("Invalid position\n");
         return;
     }
 
     if(iPos == 1)
     {
-        InsertFirst(first, iNo);
+        InsertFirst(first, iNo, size);
     }
     else if(iPos == iCount + 1)
     {
-        InsertLast(first, iNo);
+        InsertLast(first, iNo, size);
     }
     else
     {
         newn = (PNODE)malloc(sizeof(NODE));
 
-        newn->data = iNo;
+        newn->data = malloc(size);
+
+        memcpy(newn->data, iNo, size);
+
         newn->next = NULL;
 
         temp = *first;
@@ -200,21 +216,17 @@ void DeleteFirst(PPNODE first)
 {
     PNODE temp = NULL;
 
-    if(*first == NULL)                  // LL is empty
+    if(*first == NULL)
     {
         return;
     }
-    else if((*first)->next == NULL)     // LL contains one node
-    {
-        free(*first);
-        *first = NULL;
-    }
-    else                                // LL contains more than 1 node
-    {
-        temp = *first;
-        *first = (*first)->next;
-        free(temp);
-    }
+
+    temp = *first;
+
+    *first = (*first)->next;
+
+    free(temp->data);
+    free(temp);
 }
 
 
@@ -231,27 +243,32 @@ void DeleteLast(PPNODE first)
 {
     PNODE temp = NULL;
 
-    if(*first == NULL)                  // LL is empty
+    if(*first == NULL)
     {
         return;
     }
-    else if((*first)->next == NULL)     // LL contains one node
+
+    if((*first)->next == NULL)
     {
+        free((*first)->data);
         free(*first);
+
         *first = NULL;
+
+        return;
     }
-    else                                // LL contains more than 1 node
+
+    temp = *first;
+
+    while(temp->next->next != NULL)
     {
-        temp = *first;
-
-        while(temp->next->next != NULL)
-        {
-            temp = temp->next;
-        }
-
-        free(temp->next);
-        temp->next = NULL;
+        temp = temp->next;
     }
+
+    free(temp->next->data);
+    free(temp->next);
+
+    temp->next = NULL;
 }
 
 
@@ -298,7 +315,10 @@ void DeleteAtPos(PPNODE first, int iPos)
         }
 
         target = temp->next;
+
         temp->next = target->next;
+
+        free(target->data);
         free(target);
     }
 }
@@ -306,7 +326,24 @@ void DeleteAtPos(PPNODE first, int iPos)
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //
-//  Entry Point Function of the Singly Linear Linked List
+//  Function Name :     DisplayInt
+//  Description :       It is used to display the integer
+//                      data stored in the node
+//  Author :            Tanaya Rohidas Khaire
+//
+///////////////////////////////////////////////////////////////////////////////////////////
+
+void DisplayInt(void *data)
+{
+    printf("%d", *(int *)data);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+//
+//  Function Name :     main
+//  Description :       It is used to perform various
+//                      operations on the linked list
 //  Author :            Tanaya Rohidas Khaire
 //
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -315,54 +352,120 @@ int main()
 {
     PNODE head = NULL;
 
+    int iChoice = 0;
+    int iValue = 0;
     int iRet = 0;
+    int iPosition = 0;
 
-    InsertFirst(&head, 101);
-    InsertFirst(&head, 51);
-    InsertFirst(&head, 21);
-    InsertFirst(&head, 11);
+    while(iChoice != 9)
+    {
+        printf("------------------------------------\n");
+        printf("--------Enter your choice :---------\n");
+        printf("------------------------------------\n");
 
-    Display(head);
+        printf("1 : Insert node at first position\n");
+        printf("2 : Insert node at last position\n");
+        printf("3 : Insert node at given position\n");
+        printf("4 : Delete node at first position\n");
+        printf("5 : Delete node at last position\n");
+        printf("6 : Delete node at given position\n");
+        printf("7 : Display the elements\n");
+        printf("8 : Count the number of elements\n");
+        printf("9 : Terminate the application\n");
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
+        printf("------------------------------------\n");
 
-    InsertLast(&head, 111);
-    InsertLast(&head, 121);
+        scanf("%d", &iChoice);
 
-    Display(head);
+        switch(iChoice)
+        {
+            case 1:
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
+                printf("Enter the value :\n");
+                scanf("%d", &iValue);
 
-    DeleteFirst(&head);
+                InsertFirst(&head, &iValue, sizeof(int));
 
-    Display(head);
+                break;
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
 
-    DeleteLast(&head);
+            case 2:
 
-    Display(head);
+                printf("Enter the value :\n");
+                scanf("%d", &iValue);
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
+                InsertLast(&head, &iValue, sizeof(int));
 
-    InsertAtPos(&head, 105, 4);
+                break;
 
-    Display(head);
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
+            case 3:
 
-    DeleteAtPos(&head, 4);
+                printf("Enter the value :\n");
+                scanf("%d", &iValue);
 
-    Display(head);
+                printf("Enter the position :\n");
+                scanf("%d", &iPosition);
 
-    iRet = Count(head);
-    printf("Number of nodes are : %d\n", iRet);
+                InsertAtPos(&head, &iValue, iPosition, sizeof(int));
+
+                break;
+
+
+            case 4:
+
+                DeleteFirst(&head);
+
+                break;
+
+
+            case 5:
+
+                DeleteLast(&head);
+
+                break;
+
+
+            case 6:
+
+                printf("Enter the position :\n");
+                scanf("%d", &iPosition);
+
+                DeleteAtPos(&head, iPosition);
+
+                break;
+
+
+            case 7:
+
+                printf("Elements of the linked list are :\n");
+
+                Display(head, DisplayInt);
+
+                break;
+
+
+            case 8:
+
+                iRet = Count(head);
+
+                printf("Number of elements are : %d\n", iRet);
+
+                break;
+
+
+            case 9:
+
+                printf("Thank you for using Generic Data Structure Library\n");
+
+                break;
+
+
+            default:
+
+                printf("Invalid choice\n");
+        }
+    }
 
     return 0;
 }
-```
